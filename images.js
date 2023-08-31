@@ -30,7 +30,9 @@ class App extends Component {
       prevState.page !== this.state.page
     ) {
       // HTTP REQUEST
-      // axios.get(`/search?${this.state.query}}`);
+      axios.get(`/search?${this.state.query}}`).then(data => {
+        this.setState({ images: data });
+      });
     }
   }
 
