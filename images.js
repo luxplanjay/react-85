@@ -1,4 +1,6 @@
-const { Component } = require('react');
+// "123123123123123/cat"
+// "qweqweqwe123123123/cat"
+// "wdgwqg334535345425/cat"
 
 class App extends Component {
   state = {
@@ -10,7 +12,7 @@ class App extends Component {
   handleSubmit = evt => {
     evt.preventDefault();
     this.setState({
-      query: evt.target.elements.query.value,
+      query: `${Date.now()}/${evt.target.elements.query.value}`,
       images: [],
       page: 1,
     });
@@ -28,6 +30,7 @@ class App extends Component {
       prevState.page !== this.state.page
     ) {
       // HTTP REQUEST
+      // axios.get(`/search?${this.state.query}}`);
     }
   }
 
