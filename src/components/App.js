@@ -1,4 +1,4 @@
-import { Component } from 'react';
+import { useEffect, useState } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 import { QuizForm } from './QuizForm/QuizForm';
 import { QuizList } from './QuizList/QuizList';
@@ -7,137 +7,116 @@ import { GlobalStyle } from './GlobalStyle';
 import { Layout } from './Layout';
 import { createQuiz, deleteQuizById, fetchQuizzes } from 'api';
 
-export class App extends Component {
-  state = {
-    quizItems: [],
-    loading: false,
-    error: false,
-    filters: {
+const getIntialFilters = () => {
+  const savedFilters = localStorage.getItem('quiz-filters');
+  if (savedFilters !== null) {
+    return JSON.parse(savedFilters);
+  }
+  return {
+    topic: '',
+    level: 'all',
+  };
+};
+
+export const App = () => {
+  const [quizItems, setQuizItems] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
+  const [filters, setFilters] = useState(getIntialFilters);
+
+  // HTTP запрос за всеми квизами
+  useEffect(() => {
+    async function getQuizzes() {
+      try {
+        setLoading(true);
+        setError(false);
+        const quizzes = await fetchQuizzes();
+        setQuizItems(quizzes);
+      } catch (error) {
+        setError(true);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    getQuizzes();
+  }, []);
+
+  // Пишем фильтры в LS
+  useEffect(() => {
+    localStorage.setItem('quiz-filters', JSON.stringify(filters));
+  }, [filters]);
+
+  const changeFilters = (value, key) => {
+    setFilters(prevFilters => ({
+      ...prevFilters,
+      [key]: value,
+    }));
+  };
+
+  const resetFilters = () => {
+    setFilters({
       topic: '',
       level: 'all',
-    },
+    });
   };
 
-  async componentDidMount() {
-    const savedFilters = localStorage.getItem('quiz-filters');
-    if (savedFilters !== null) {
-      this.setState({
-        filters: JSON.parse(savedFilters),
-      });
-    }
-
+  const addQuiz = async newQuiz => {
     try {
-      this.setState({ loading: true, error: false });
-      const quizzes = await fetchQuizzes();
-      this.setState({ quizItems: quizzes });
-    } catch (error) {
-      this.setState({ error: true });
-    } finally {
-      this.setState({ loading: false });
-    }
-  }
-
-  componentDidUpdate(prevProps, prevState) {
-    if (prevState.filters !== this.state.filters) {
-      localStorage.setItem('quiz-filters', JSON.stringify(this.state.filters));
-    }
-  }
-
-  addQuiz = async newQuiz => {
-    try {
-      this.setState({ loading: true, error: false });
+      setLoading(true);
+      setError(false);
       const addedQuiz = await createQuiz(newQuiz);
-      this.setState(prevState => ({
-        quizItems: [...prevState.quizItems, addedQuiz],
-      }));
+      setQuizItems(prevItems => [...prevItems, addedQuiz]);
     } catch (error) {
-      this.setState({ error: true });
+      setError(true);
     } finally {
-      this.setState({ loading: false });
+      setLoading(false);
     }
   };
 
-  deleteQuiz = async quizId => {
+  const deleteQuiz = async quizId => {
     try {
-      this.setState({ loading: true, error: false });
+      setLoading(true);
+      setError(false);
       const deletedQuiz = await deleteQuizById(quizId);
-      this.setState(prevState => ({
-        quizItems: prevState.quizItems.filter(
-          quiz => quiz.id !== deletedQuiz.id
-        ),
-      }));
+      setQuizItems(prevItems =>
+        prevItems.filter(quiz => quiz.id !== deletedQuiz.id)
+      );
       toast.success('ВСЕ ОЧЕНЬ ХОРОШО!');
     } catch (error) {
-      this.setState({ error: true });
+      setError(true);
     } finally {
-      this.setState({ loading: false });
+      setLoading(false);
     }
   };
 
-  changeLevelFilter = newLevel => {
-    this.setState(prevState => ({
-      filters: {
-        ...prevState.filters,
-        level: newLevel,
-      },
-    }));
-  };
+  const visibleItems = quizItems.filter(quiz => {
+    const hasTopic = quiz.topic
+      .toLowerCase()
+      .includes(filters.topic.toLowerCase());
 
-  changeTopicFilter = newTopic => {
-    this.setState(prevState => ({
-      filters: {
-        ...prevState.filters,
-        topic: newTopic,
-      },
-    }));
-  };
+    if (filters.level === 'all') {
+      return hasTopic;
+    }
+    return hasTopic && quiz.level === filters.level;
+  });
 
-  resetFilters = () => {
-    this.setState({
-      filters: {
-        topic: '',
-        level: 'all',
-      },
-    });
-  };
-
-  getVisibleQuizItems = () => {
-    const { quizItems, filters } = this.state;
-
-    return quizItems.filter(quiz => {
-      const hasTopic = quiz.topic
-        .toLowerCase()
-        .includes(filters.topic.toLowerCase());
-
-      if (filters.level === 'all') {
-        return hasTopic;
-      }
-      return hasTopic && quiz.level === filters.level;
-    });
-  };
-
-  render() {
-    const { filters, loading, error } = this.state;
-    const visibleItems = this.getVisibleQuizItems();
-
-    return (
-      <Layout>
-        <QuizForm onAdd={this.addQuiz} />
-        <SearchBar
-          level={filters.level}
-          topic={filters.topic}
-          onChangeLevel={this.changeLevelFilter}
-          onChangeTopic={this.changeTopicFilter}
-          onReset={this.resetFilters}
-        />
-        {loading && <div>LOADING...</div>}
-        {error && !loading && <div>OOPS! THERE WAS AN ERROR!</div>}
-        {visibleItems.length > 0 && (
-          <QuizList items={visibleItems} onDelete={this.deleteQuiz} />
-        )}
-        <GlobalStyle />
-        <Toaster position="top-right" />
-      </Layout>
-    );
-  }
-}
+  return (
+    <Layout>
+      <QuizForm onAdd={addQuiz} />
+      <SearchBar
+        level={filters.level}
+        topic={filters.topic}
+        onChange={changeFilters}
+        onReset={resetFilters}
+      />
+      {loading && <div>LOADING...</div>}
+      {error && !loading && <div>OOPS! THERE WAS AN ERROR!</div>}
+      {visibleItems.length > 0 && (
+        <QuizList items={visibleItems} onDelete={deleteQuiz} />
+      )}
+      <GlobalStyle />
+      <Toaster position="top-right" />
+    </Layout>
+  );
+};
