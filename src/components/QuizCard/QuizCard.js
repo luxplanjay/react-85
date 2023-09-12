@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { Topic, Wrapper, MetaWrapper, Text, Button } from './QuizCard.styled';
 
 export const QuizCard = ({
@@ -6,7 +7,9 @@ export const QuizCard = ({
 }) => {
   return (
     <Wrapper level={level}>
-      <Topic>{topic}</Topic>
+      <Link to={`/quizzes/${id}`}>
+        <Topic>{topic}</Topic>
+      </Link>
       <MetaWrapper>
         <Text>
           <b>Level:</b> {level}
