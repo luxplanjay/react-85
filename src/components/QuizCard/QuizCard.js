@@ -1,13 +1,15 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Topic, Wrapper, MetaWrapper, Text, Button } from './QuizCard.styled';
 
 export const QuizCard = ({
   quiz: { id, topic, level, time, questions },
   onDelete,
 }) => {
+  const location = useLocation();
+
   return (
     <Wrapper level={level}>
-      <Link to={`/quizzes/${id}`}>
+      <Link to={`/quizzes/${id}`} state={{ from: location }}>
         <Topic>{topic}</Topic>
       </Link>
       <MetaWrapper>
