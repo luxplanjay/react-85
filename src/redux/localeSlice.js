@@ -6,8 +6,18 @@ const slice = createSlice({
     lang: 'en',
   },
   reducers: {
-    changeLang(state, action) {
-      state.lang = action.payload;
+    changeLang: {
+      reducer(state, action) {
+        state.lang = action.payload;
+      },
+      prepare(payload) {
+        return {
+          payload,
+          meta: {
+            ga: true,
+          },
+        };
+      },
     },
   },
 });
